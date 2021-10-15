@@ -70,8 +70,9 @@ http {
   {% set latest_cert_pair = service.latest_cert_pair %}
   {% if service.acme_ssl and latest_cert_pair %}
     server {
-      listen [::]:443 ssl ipv6only=on;
       listen 443 ssl;
+
+      server_name {{ service.hosts | join(" ") }};
 
       ssl_certificate /run/secrets/{{ latest_cert_pair[1].name }};
       ssl_certificate_key /run/secrets/{{ latest_cert_pair[0].name }};
