@@ -18,7 +18,7 @@ EOF
 
 docker config create ndi.config.0 my.config.yaml
 
-docker network create --attachable --driver overlay --opt encrypted nginx-docker-ingress || true
+docker network create --driver overlay --opt encrypted nginx-docker-ingress || true
 docker service create \
         --name nginx-docker-ingress-controller \
         --replicas 1 \
