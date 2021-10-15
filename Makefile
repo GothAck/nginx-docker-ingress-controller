@@ -1,10 +1,15 @@
-build:
+all:
+
+test_common_dockerfiles:
+	pipenv run python scripts/check_common_dockerfiles.py
+
+build: test_common_dockerfiles
 	docker build --tag gothack/docker-swarm-ingress:controller-latest -f Dockerfile.controller .
 	docker build --tag gothack/docker-swarm-ingress:robot-latest -f Dockerfile.robot .
 	docker build --tag gothack/docker-swarm-ingress:challenge-latest -f Dockerfile.challenge .
 	docker build --tag gothack/docker-swarm-ingress:nginx-latest -f Dockerfile.nginx .
 
-push:
+push: build
 	docker push gothack/docker-swarm-ingress:controller-latest
 	docker push gothack/docker-swarm-ingress:robot-latest
 	docker push gothack/docker-swarm-ingress:challenge-latest
@@ -44,3 +49,7 @@ clean:
 	docker image rm gothack/docker-swarm-ingress:challenge-latest || true
 	docker image rm gothack/docker-swarm-ingress:nginx-latest || true
 	docker image prune -f
+
+.PHONY: all test_common_dockerfiles build push build_clean upload deploy teardown teardown_certs teardown_confs clean
+
+.NOTPARALLEL:

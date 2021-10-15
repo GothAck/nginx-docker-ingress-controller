@@ -4,6 +4,7 @@ RUN apk add --update --no-cache gcc g++ musl-dev libffi-dev
 RUN pip3 install --user --no-cache acmeasync docker jinja2
 
 FROM python:3-alpine
+# END COMMON
 
 WORKDIR /app
 COPY --from=base /root/.local /root/.local
