@@ -232,7 +232,7 @@ class VersionedBase(ABC, Generic[T]):
         self.prefix = prefix
 
     @abstractproperty
-    def load_list(self) -> List[T]:
+    def list(self) -> List[T]:
         ...
 
     @abstractstaticmethod
@@ -242,8 +242,7 @@ class VersionedBase(ABC, Generic[T]):
     @property
     def versions(self) -> Dict[int, T]:
         return {
-            int(self.get_name(config).split(".")[-1]): config
-            for config in self.load_list
+            int(self.get_name(config).split(".")[-1]): config for config in self.list
         }
 
     @property
@@ -278,7 +277,7 @@ class VersionedBase(ABC, Generic[T]):
 
 class VersionedSecrets(VersionedBase[docker_secrets.Model]):
     @property
-    def load_list(self) -> List[docker_secrets.Model]:
+    def list(self) -> List[docker_secrets.Model]:
         return self.docker.list_secrets(self.prefix)
 
     @staticmethod

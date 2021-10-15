@@ -217,7 +217,6 @@ class Controller:
         logger.info("Ensuring dhparams is fresh")
         vs = self.dhparams_vs
 
-        print(vs, vs.load_list, vs.versions)
         version, model = vs.latest_version or (None, None)
         logger.info("%r %r", version, model)
         if version is not None and model is not None:
