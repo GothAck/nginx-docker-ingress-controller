@@ -1,5 +1,5 @@
 from abc import ABC, abstractproperty, abstractstaticmethod
-from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar, cast
 
 import datetime
 import hashlib
@@ -282,4 +282,4 @@ class VersionedSecrets(VersionedBase[docker_secrets.Model]):
 
     @staticmethod
     def get_name(config: docker_secrets.Model) -> str:
-        return config.name
+        return cast(str, config.name)
