@@ -1,4 +1,4 @@
-from abc import ABC, abstractproperty
+from abc import ABC, abstractproperty, abstractstaticmethod
 from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar
 
 import datetime
@@ -225,6 +225,9 @@ T = TypeVar("T")
 
 class VersionedBase(ABC, Generic[T]):
     def __init__(self, docker: DockerAdapter, prefix: str) -> None:
+        if not prefix.endswith("."):
+            prefix += "."
+
         self.docker = docker
         self.prefix = prefix
 
@@ -232,9 +235,16 @@ class VersionedBase(ABC, Generic[T]):
     def load_list(self) -> List[T]:
         ...
 
+    @abstractstaticmethod
+    def get_name(config: T) -> str:
+        ...
+
     @property
     def versions(self) -> Dict[int, T]:
-        return {int(config.name.split(".")[-1]): config for config in self.load_list}
+        return {
+            int(self.get_name(config).split(".")[-1]): config
+            for config in self.load_list
+        }
 
     @property
     def latest_version(self) -> Optional[Tuple[int, T]]:
@@ -246,6 +256,13 @@ class VersionedBase(ABC, Generic[T]):
 
         return (max_version, versions[max_version])
 
+    @property
+    def latest(self) -> Optional[T]:
+        latest_version = self.latest_version
+        if latest_version is None:
+            return latest_version
+        return latest_version[1]
+
     def common_versions(self, other: "VersionedBase[T]") -> Dict[int, Tuple[T, T]]:
         my_versions = self.versions
         other_versions = other.versions
@@ -256,9 +273,6 @@ class VersionedBase(ABC, Generic[T]):
         }
 
     def with_version(self, version: int) -> str:
-        prefix = self.prefix
-        if not prefix.endswith("."):
-            prefix += "."
         return f"{self.prefix}{version}"
 
 
@@ -266,3 +280,7 @@ class VersionedSecrets(VersionedBase[docker_secrets.Model]):
     @property
     def load_list(self) -> List[docker_secrets.Model]:
         return self.docker.list_secrets(self.prefix)
+
+    @staticmethod
+    def get_name(config: docker_secrets.Model) -> str:
+        return config.name
