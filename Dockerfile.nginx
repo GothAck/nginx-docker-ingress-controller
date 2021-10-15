@@ -1,0 +1,8 @@
+FROM nginx:alpine
+
+COPY options-ssl-nginx.conf /etc/nginx/
+
+EXPOSE 80/tcp
+EXPOSE 443/tcp
+
+HEALTHCHECK --interval=10s --timeout=2s --start-period=5s --retries=2 CMD [ "curl", "-s", "-A", "Docker health check", "http://127.0.0.1/" ]

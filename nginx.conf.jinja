@@ -1,0 +1,92 @@
+user nginx;
+worker_processes 1;
+
+error_log /dev/fd/2 warn;
+pid /var/run/nginx.pid;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  resolver 127.0.0.11 ipv6=off;
+
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  log_format default '$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" "$request_id"';
+  access_log /dev/fd/1 default;
+
+  sendfile on;
+  keepalive_timeout 60;
+
+  proxy_set_header Request-Id $request_id;
+  add_header Request-Id $request_id;
+
+  server {
+    listen 80;
+    server_name _;
+    location / {
+      root   /usr/share/nginx/html;
+      index  index.html index.htm;
+    }
+  }
+
+  {% for service in services -%}
+    # Service {{ service.service.id }}: {{ service.service.name }}
+  {% if service.ssl_redirect %}
+    server {
+      listen 80;
+      server_name {{ service.hosts | join(" ") }};
+
+      location ^~ /.well-known/acme-challenge/ {
+        resolver 127.0.0.11;
+        proxy_pass http://nginx-docker-ingress-robot:80$request_uri;
+      }
+
+      location / {
+        return 301 https://$host$request_uri;
+      }
+    }
+  {% else %}
+    server {
+      listen 80;
+      server_name {{ service.hosts | join(" ") }};
+
+      location ^~ /.well-known/acme-challenge/ {
+        resolver 127.0.0.11;
+        proxy_pass http://nginx-docker-ingress-robot:80$request_uri;
+      }
+
+      location / {
+        resolver 127.0.0.11;
+        set $service_host {{ service.service.name }};
+        set $service_port {{ service.port }};
+        set $service_path {{ service.path }};
+        proxy_pass http://$service_host:$service_port$service_path$request_uri;
+      }
+    }
+  {% endif %}
+  {% set latest_cert_pair = service.latest_cert_pair %}
+  {% if service.acme_ssl and latest_cert_pair %}
+    server {
+      listen [::]:443 ssl ipv6only=on;
+      listen 443 ssl;
+
+      ssl_certificate /run/secrets/{{ latest_cert_pair[1].name }};
+      ssl_certificate_key /run/secrets/{{ latest_cert_pair[0].name }};
+      include /etc/nginx/options-ssl-nginx.conf;
+      ssl_dhparam /etc/nginx/ssl-dhparams.pem;
+
+      location / {
+        resolver 127.0.0.11;
+        set $service_host {{ service.service.name }};
+        set $service_port {{ service.port }};
+        set $service_path {{ service.path }};
+        proxy_pass http://$service_host:$service_port$service_path$request_uri;
+      }
+    }
+
+  {% endif %}
+  {% endfor %}
+}
