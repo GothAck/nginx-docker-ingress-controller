@@ -9,6 +9,15 @@ Run this service in your Swarm, label your frontend services, magic happens.
 
 Seriously:
 ```sh
+
+cat > my.config.yaml <<EOF
+acme:
+  email: my-email@example.com
+  accept_tos: True
+EOF
+
+docker config create ndi.config.0 my.config.yaml
+
 docker network create --attachable --driver overlay --opt encrypted nginx-docker-ingress || true
 docker service create \
         --name nginx-docker-ingress-controller \
@@ -34,8 +43,7 @@ Yeah, I cba running my own bare-metal k8s cluster... <shrug />
 - Code tidy
 - Handle exceptions better
 - Handle async tasks failing
-- Configuration
 - Tests
 - Make more tea
-- Tidy up old configs & key/cert pairs
-- Utilize Docker Configs for non-secret data storage
+- Tidy up old nginx configs & key/cert pairs
+- Utilize Docker Configs for more non-secret data storage

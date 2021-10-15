@@ -36,7 +36,7 @@ class ConfigAcme(BaseModel):
 
 
 class ConfigRoot(BaseModel):
-    ports: ConfigPorts
+    ports: ConfigPorts = ConfigPorts()
     acme: ConfigAcme
 
 
