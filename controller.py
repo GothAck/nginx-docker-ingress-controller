@@ -63,7 +63,7 @@ class Controller:
         services = self.adapter.services
         logger.debug("Generating Nginx config, services %r", services)
         return SecretContainer(
-            self.config_template.render(services=services),
+            self.config_template.render(services=services, config=self.adapter.config),
             metadata=dict(cert_pairs=map(lambda s: s.latest_cert_pair, services)),
         )
 
@@ -100,7 +100,10 @@ class Controller:
                     self.adapter.secret_reference(model.id, model.name, model.name)
                 )
 
-        endpoint_spec = EndpointSpec(ports={9080: 80, 9443: 443})
+        http_port = self.adapter.config.ports.http
+        https_port = self.adapter.config.ports.https
+
+        endpoint_spec = EndpointSpec(ports={http_port: 80, https_port: 443})
 
         service = self.nginx_service
         if not service:

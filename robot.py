@@ -30,7 +30,7 @@ class Robot:
         if await self.cert.load_account():
             return True
         return await self.cert.create_account(
-            "docker-swarm-ingress@greg.gothack.ninja", True
+            self.adapter.config.acme.email, self.adapter.config.acme.accept_tos
         )
 
     @staticmethod

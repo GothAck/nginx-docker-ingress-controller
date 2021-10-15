@@ -7,6 +7,8 @@ name = "pypi"
 acmeasync = "*"
 docker = "*"
 jinja2 = "*"
+pyyaml = "*"
+pydantic = "*"
 
 [dev-packages]
 mypy = "*"

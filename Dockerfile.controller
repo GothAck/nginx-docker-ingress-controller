@@ -1,7 +1,7 @@
 FROM python:3-alpine AS base
 
 RUN apk add --update --no-cache gcc g++ musl-dev libffi-dev
-RUN pip3 install --user --no-cache acmeasync docker jinja2
+RUN pip3 install --user --no-cache acmeasync docker jinja2 pyyaml pydantic
 
 FROM python:3-alpine
 # END COMMON
@@ -9,7 +9,7 @@ FROM python:3-alpine
 RUN apk add --update --no-cache openssl
 
 WORKDIR /app
-COPY common.py controller.py nginx.conf.jinja ./
+COPY common.py config.py controller.py nginx.conf.jinja ./
 COPY --from=base /root/.local /root/.local
 
 CMD ["python", "controller.py"]

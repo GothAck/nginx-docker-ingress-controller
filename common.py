@@ -1,6 +1,8 @@
 from abc import ABC, abstractproperty, abstractstaticmethod
+from functools import lru_cache
 from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar, cast
 
+import base64
 import datetime
 import hashlib
 import logging
@@ -11,12 +13,15 @@ import docker.models.secrets as docker_secrets
 import docker.models.configs as docker_configs
 import docker.types as docker_types
 
+from config import ConfigRoot, config_load_and_convert
+
 NAMESPACE = "ndi"
 SECRET_NGINX_CONF = f"{NAMESPACE}.conf"
 SECRET_ACME_ACCOUNT = f"{NAMESPACE}.acct"
 SECRET_SVC_BASE = f"{NAMESPACE}.svc"
 SECRET_DHPARAM_BASE = f"{NAMESPACE}.dhparam"
 CONFIG_CHALLENGE_BASE = f"{NAMESPACE}.challange"
+CONFIG_CONFIG_BASE = f"{NAMESPACE}.config"
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +70,12 @@ class DockerAdapter:
         self.del_secret(secret_name)
         return self.client.secrets.create(name=secret_name, data=secret, labels=labels)
 
+    def list_configs(self, prefix: Optional[str] = None):
+        configs = self.client.configs.list()
+        if prefix is not None:
+            configs = [config for config in configs if config.name.startswith(prefix)]
+        return configs
+
     def config_read(self, config_name: str) -> Optional[docker_configs.Model]:
         try:
             return self.client.configs.get(config_name)
@@ -94,6 +105,19 @@ class DockerAdapter:
                 filters=dict(label="nginx-ingress.host")
             )
         ]
+
+    @property
+    @lru_cache()
+    def config(self) -> Optional[ConfigRoot]:
+        latest = VersionedConfigs(self, CONFIG_CONFIG_BASE).latest
+        if not latest:
+            raise Exception(
+                f"Config missing, try adding a docker config called {CONFIG_CONFIG_BASE}.0"
+            )
+
+        data = base64.b64decode(latest.attrs["Spec"]["Data"]).decode("utf-8")
+
+        return config_load_and_convert(data)
 
 
 class ServiceAdapter:
@@ -282,4 +306,14 @@ class VersionedSecrets(VersionedBase[docker_secrets.Model]):
 
     @staticmethod
     def get_name(config: docker_secrets.Model) -> str:
+        return cast(str, config.name)
+
+
+class VersionedConfigs(VersionedBase[docker_configs.Model]):
+    @property
+    def list(self) -> List[docker_configs.Model]:
+        return self.docker.list_configs(self.prefix)
+
+    @staticmethod
+    def get_name(config: docker_configs.Model) -> str:
         return cast(str, config.name)
