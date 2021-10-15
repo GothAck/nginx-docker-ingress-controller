@@ -3,7 +3,6 @@ from typing import List, Optional
 import asyncio
 import logging
 import sys
-from aiohttp import web
 
 import docker
 
@@ -15,8 +14,6 @@ logging.root.setLevel(logging.INFO)
 logger = logging.getLogger("robot")
 logger.setLevel(logging.DEBUG)
 
-adapter = DockerAdapter(docker.from_env())
-
 
 class Robot:
     adapter: DockerAdapter
@@ -25,11 +22,6 @@ class Robot:
     def __init__(self) -> None:
         self.adapter = DockerAdapter(docker.from_env())
         self.cert = RoboCert()
-        self.http = web.Application()
-
-        self.http.router.add_get(
-            "/.well-known/acme-challenge/{token}", self.cert.http_01_challenge_handler
-        )
 
     async def begin(self):
         await self.cert.begin()
@@ -76,19 +68,14 @@ class Robot:
 
         # TODO: Clean up old keys and certs here
 
-    async def observe_loop(self) -> None:
-        while True:
-            await self.observe()
-            await asyncio.sleep(10)
-
     async def observe_and_obey(self) -> None:
         if not await self.cert.load_account():
             logger.critical("Could not load account")
             return
-        web_task = asyncio.create_task(web._run_app(self.http, port=80))
-        observe_task = asyncio.create_task(self.observe_loop())
 
-        await asyncio.wait([web_task, observe_task])
+        while True:
+            await self.observe()
+            await asyncio.sleep(10)
 
 
 async def main_ensure_account(robot: Robot) -> int:

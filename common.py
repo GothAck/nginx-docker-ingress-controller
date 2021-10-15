@@ -8,13 +8,15 @@ import logging
 import docker
 import docker.models.services as docker_services
 import docker.models.secrets as docker_secrets
+import docker.models.configs as docker_configs
 import docker.types as docker_types
 
-SECRET_BASE = "ndi"
-SECRET_NGINX_CONF = f"{SECRET_BASE}.conf"
-SECRET_ACME_ACCOUNT = f"{SECRET_BASE}.acct"
-SECRET_SVC_BASE = f"{SECRET_BASE}.svc"
-SECRET_DHPARAM_BASE = f"{SECRET_BASE}.dhparam"
+NAMESPACE = "ndi"
+SECRET_NGINX_CONF = f"{NAMESPACE}.conf"
+SECRET_ACME_ACCOUNT = f"{NAMESPACE}.acct"
+SECRET_SVC_BASE = f"{NAMESPACE}.svc"
+SECRET_DHPARAM_BASE = f"{NAMESPACE}.dhparam"
+CONFIG_CHALLENGE_BASE = f"{NAMESPACE}.challange"
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,27 @@ class DockerAdapter:
             labels = {}
         self.del_secret(secret_name)
         return self.client.secrets.create(name=secret_name, data=secret, labels=labels)
+
+    def config_read(self, config_name: str) -> Optional[docker_configs.Model]:
+        try:
+            return self.client.configs.get(config_name)
+        except docker.errors.NotFound:
+            return None
+
+    def config_del(self, config_name: str) -> bool:
+        try:
+            self.client.configs.get(config_name).remove()
+            return True
+        except docker.errors.NotFound:
+            return False
+
+    def config_write(
+        self, config_name: str, config: str, labels: Optional[Dict[str, str]] = None
+    ) -> docker_configs.Model:
+        if labels is None:
+            labels = {}
+        self.config_del(config_name)
+        return self.client.configs.create(name=config_name, data=config, labels=labels)
 
     @property
     def services(self) -> List["ServiceAdapter"]:

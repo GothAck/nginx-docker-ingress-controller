@@ -1,0 +1,15 @@
+FROM python:3-alpine AS base
+
+RUN apk add --update --no-cache gcc g++ musl-dev libffi-dev
+RUN pip3 install --user --no-cache acmeasync docker jinja2
+
+FROM python:3-alpine
+
+WORKDIR /app
+COPY --from=base /root/.local /root/.local
+
+COPY common.py challenge.py ./
+
+EXPOSE 80/tcp
+
+CMD ["python", "challenge.py"]

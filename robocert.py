@@ -6,12 +6,17 @@ import time
 
 from acme import crypto_util
 import OpenSSL
-from aiohttp import web
 
 from acmeasync.acmele import ACMELE, Challenge
 import docker
 
-from common import SECRET_SVC_BASE, DockerAdapter, SECRET_ACME_ACCOUNT, ServiceAdapter
+from common import (
+    CONFIG_CHALLENGE_BASE,
+    SECRET_SVC_BASE,
+    DockerAdapter,
+    SECRET_ACME_ACCOUNT,
+    ServiceAdapter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +25,9 @@ ACCOUNT_SECRET_PATH = f"/run/secrets/{SECRET_ACME_ACCOUNT}"
 
 
 class RoboCert:
-    challenges: Dict[str, str]
-
     def __init__(self) -> None:
         self.adapter = DockerAdapter(docker.from_env())
         self.acme = ACMELE(DIRECTORY_URI)
-        self.challenges = {}
 
     async def begin(self) -> None:
         await self.acme.begin()
@@ -57,9 +59,11 @@ class RoboCert:
         challs: List[Challenge] = []
         for auth in await order.authorizations():
             for chall in await auth.challenges("http-01"):
-                self.challenges[
-                    chall.data["token"]
-                ] = f"{chall.data['token']}.{self.acme.account_key_thumbprint}"
+                token = chall.data["token"]
+                self.adapter.config_write(
+                    f"{CONFIG_CHALLENGE_BASE}.{token}",
+                    f"{token}.{self.acme.account_key_thumbprint}",
+                )
                 challs.append(await chall.begin())
 
         if not challs:
@@ -72,7 +76,8 @@ class RoboCert:
             await chall.await_status("valid")
 
         for chall in challs:
-            del self.challenges[chall.data["token"]]
+            # FIXME: Clean up challenges
+            pass
 
         logger.info("Awaiting order status")
 
@@ -138,8 +143,3 @@ class RoboCert:
         logger.info("Order complete")
 
         return True
-
-    async def http_01_challenge_handler(self, req: web.Request) -> web.Response:
-        token = req.match_info["token"]
-        logger.info("http_01_challenge_handler %s", token)
-        return web.Response(text=self.challenges.get(token, ""))

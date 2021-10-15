@@ -36,7 +36,6 @@ Yeah, I cba running my own bare-metal k8s cluster... <shrug />
 - Handle async tasks failing
 - Configuration
 - Tests
-- Separate http acme-challenge server out of robot
 - Make more tea
 - Tidy up old configs & key/cert pairs
 - Utilize Docker Configs for non-secret data storage

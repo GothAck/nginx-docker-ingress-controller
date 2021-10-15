@@ -206,7 +206,6 @@ class Controller:
             command=["python", "robot.py", "observe-and-obey"],
             restart_policy=RestartPolicy(),
             mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
-            networks=["nginx-docker-ingress"],
             secrets=[account_secret_ref],
         )
 
@@ -254,6 +253,28 @@ class Controller:
                 secret_name, f.read(), dict(expires=str(secert_expiry_unix))
             )
 
+    @property
+    def challenge_service(self) -> Optional[docker_services.Model]:
+        try:
+            return self.adapter.client.services.get("nginx-docker-ingress-challenge")
+        except docker.errors.NotFound:
+            return None
+
+    def ensure_challenge(self):
+        logger.info("Ensure challenge handler")
+
+        challenge_service = self.challenge_service
+
+        if challenge_service:
+            challenge_service.remove()
+
+        challenge_service = self.adapter.client.services.create(
+            image="gothack/docker-swarm-ingress:challenge-latest",
+            name="nginx-docker-ingress-challenge",
+            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
+            networks=["nginx-docker-ingress"],
+        )
+
 
 def main(argv: List[str]) -> int:
     logger.info("Booting Nginx docker ingress controller")
@@ -262,6 +283,7 @@ def main(argv: List[str]) -> int:
     controller.ensure_account()
     controller.ensure_dhparams()
     controller.ensure_robot()
+    controller.ensure_challenge()
 
     while True:
         controller.ensure_nginx_service()
