@@ -183,8 +183,8 @@ class Controller:
         except docker.errors.NotFound:
             return None
 
-    def run_robot(self) -> None:
-        logger.info("Running the robot")
+    def ensure_robot(self) -> None:
+        logger.info("Ensure robot")
 
         account_secret_id = self.adapter.secret_exists(SECRET_ACME_ACCOUNT)
         if not account_secret_id:
@@ -260,10 +260,8 @@ def main(argv: List[str]) -> int:
     controller = Controller()
 
     controller.ensure_account()
-
     controller.ensure_dhparams()
-
-    controller.run_robot()
+    controller.ensure_robot()
 
     while True:
         controller.ensure_nginx_service()

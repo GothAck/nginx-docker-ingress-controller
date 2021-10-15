@@ -46,7 +46,7 @@ class DockerAdapter:
         try:
             return self.client.secrets.get(secret_name)
         except docker.errors.NotFound:
-            return False
+            return None
 
     def del_secret(self, secret_name: str) -> bool:
         try:
