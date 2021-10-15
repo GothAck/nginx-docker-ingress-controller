@@ -69,7 +69,8 @@ class Robot:
             for service in services
         ]
 
-        res = await asyncio.wait(service_futs)
+        if service_futs:
+            await asyncio.wait(service_futs)
 
         logger.info("Observe done")
 
