@@ -1,5 +1,5 @@
 from abc import ABC, abstractproperty
-from typing import Any, Dict, Generic, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar
 
 import datetime
 import hashlib
@@ -95,10 +95,10 @@ class ServiceAdapter:
         return f"<ServiceAdapter: {repr(self.service)} {', '.join(labels)}>"
 
     @property
-    def labels(self) -> List[str]:
+    def labels(self) -> Dict[str, str]:
         if "Labels" in self.service.attrs["Spec"]:
             return self.service.attrs["Spec"]["Labels"]
-        return []
+        return {}
 
     @property
     def hosts(self) -> List[str]:

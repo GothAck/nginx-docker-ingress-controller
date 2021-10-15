@@ -1,18 +1,14 @@
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 
 import asyncio
 import logging
-from time import sleep
 import sys
 from aiohttp import web
 
 import docker
-import docker.models.services as docker_services
-from docker.types.services import EndpointSpec
 
-from common import DockerAdapter, SecretContainer, SECRET_NGINX_CONF, ServiceAdapter
-from robocert import RoboCert, ACCOUNT_SECRET_PATH
+from common import DockerAdapter, ServiceAdapter
+from robocert import RoboCert
 
 logging.basicConfig()
 logging.root.setLevel(logging.INFO)
@@ -119,6 +115,8 @@ async def main(argv: List[str]) -> int:
         return await main_ensure_account(robot)
     elif argv[0] == "observe-and-obey":
         return await main_observe_and_obey(robot)
+
+    return 1
 
 
 if __name__ == "__main__":
