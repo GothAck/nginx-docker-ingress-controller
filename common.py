@@ -280,6 +280,7 @@ class ServiceAdapter(Generic[TConfigService]):
 
     def ensure(
         self,
+        command: Optional[str],
         networks: Optional[List[str]] = None,
         secrets: Optional[List[SecretReference]] = None,
         mounts: Optional[List[str]] = None,
@@ -299,6 +300,7 @@ class ServiceAdapter(Generic[TConfigService]):
             model = self.docker.client.services.create(
                 image=config.image,
                 name=config.name,
+                command=command,
                 endpoint_spec=config.endpoint_spec,
                 networks=networks,
                 secrets=secrets,
@@ -313,6 +315,7 @@ class ServiceAdapter(Generic[TConfigService]):
             model.update(
                 image=config.image,
                 name=config.name,
+                command=command,
                 endpoint_spec=config.endpoint_spec,
                 networks=networks,
                 secrets=secrets,

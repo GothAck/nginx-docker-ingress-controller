@@ -106,7 +106,8 @@ class Controller:
             model.remove()
 
         self.adapter.svc_account.ensure(
-            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"]
+            command=["python", "robot.py", "ensure-account"],
+            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
         )
 
         while True:
@@ -138,7 +139,8 @@ class Controller:
             model.remove()
 
         self.adapter.svc_robot.ensure(
-            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"]
+            command=["python", "robot.py", "observe-and-obey"],
+            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
         )
 
     @property
