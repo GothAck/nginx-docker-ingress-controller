@@ -325,6 +325,7 @@ class ServiceAdapter(Generic[TConfigService]):
         return model
 
     def wait_for_state(self, state_desired: str, states_invalid: List[str]) -> bool:
+        logger.info("Waiting for %s state %s", self.config.name, state_desired)
         while True:
             sleep(10)
             tasks = self.model.tasks()
@@ -333,6 +334,8 @@ class ServiceAdapter(Generic[TConfigService]):
             for task in tasks:
                 state = task["Status"]["State"]
                 states.add(state)
+
+            logger.info("State %s", state)
 
             if states_invalid in states:
                 return False
