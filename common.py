@@ -331,6 +331,8 @@ class ServiceAdapter(Generic[TConfigService]):
             tasks = self.model.tasks()
             states = set()
 
+            logger.info("%r", tasks)
+
             for task in tasks:
                 state = task["Status"]["State"]
                 states.add(state)
