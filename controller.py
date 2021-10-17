@@ -87,6 +87,10 @@ class Controller:
             secrets=[config_secret_ref, dhparams_secret_ref],
         )
 
+        self.adapter.svc_nginx.wait_for_state("running", "failed")
+
+        self.adapter.svc_nginx.model.scale(self.adapter.svc_nginx.config.replicas)
+
     @property
     def account_service(self) -> Optional[docker_services.Model]:
         try:
@@ -110,16 +114,7 @@ class Controller:
             mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
         )
 
-        while True:
-            sleep(10)
-            tasks = model.tasks()
-            assert len(tasks) == 1, "Only one task started"
-            state = tasks[0]["Status"]["State"]
-            desired_state = tasks[0]["DesiredState"]
-            exit_code = tasks[0]["Status"].get("ContainerStatus", {}).get("ExitCode", 0)
-            logger.info("%s %s %d", state, desired_state, exit_code)
-            if state == "complete":
-                break
+        self.adapter.svc_account.wait_for_state("complete", "failed")
 
     def ensure_robot(self) -> None:
         logger.info("Ensure robot")

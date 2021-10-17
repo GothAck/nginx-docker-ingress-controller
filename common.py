@@ -308,8 +308,6 @@ class ServiceAdapter(Generic[TConfigService]):
                 constraints=config.constraints,
                 **kwargs,
             )
-            if isinstance(config, ConfigServiceNginx):
-                self.model.scale(config.replicas)
         else:
             logger.info("Service %s exists, updating", config.name)
             model.update(
@@ -323,10 +321,22 @@ class ServiceAdapter(Generic[TConfigService]):
                 constraints=config.constraints,
                 **kwargs,
             )
-            if isinstance(config, ConfigServiceNginx):
-                self.model.scale(config.replicas)
 
         return model
+
+    def wait_for_state(self, state: str, invalid_states: List[str]) -> bool:
+        sleep(10)
+        tasks = self.model.tasks()
+        states = set()
+
+        for task in tasks:
+            state = task["Status"]["State"]
+            states.add(state)
+
+        if invalid_states in states:
+            return False
+
+        return len(states) == 1 and states[0] == state
 
 
 class SecretContainer:
