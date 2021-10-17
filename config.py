@@ -63,10 +63,12 @@ class ConfigServiceBase(BaseModel):
 
 class ConfigServiceAccount(ConfigServiceBase):
     name: str = "nginx-docker-ingress-account"
+    image: str = "gothack/docker-swarm-ingress:robot-latest"
 
 
 class ConfigServiceChallenge(ConfigServiceBase):
     name: str = "nginx-docker-ingress-challenge"
+    image: str = "gothack/docker-swarm-ingress:challenge-latest"
 
     @property
     def endpoint_spec(self) -> Optional[EndpointSpec]:
@@ -88,6 +90,7 @@ class ConfigServiceNginx(ConfigServiceBase):
 
 class ConfigServiceRobot(ConfigServiceBase):
     name: str = "nginx-docker-ingress-robot"
+    image: str = "gothack/docker-swarm-ingress:robot-latest"
 
 
 class ConfigServices(BaseModel):
