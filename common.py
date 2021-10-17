@@ -324,19 +324,21 @@ class ServiceAdapter(Generic[TConfigService]):
 
         return model
 
-    def wait_for_state(self, state: str, invalid_states: List[str]) -> bool:
-        sleep(10)
-        tasks = self.model.tasks()
-        states = set()
+    def wait_for_state(self, state_desired: str, states_invalid: List[str]) -> bool:
+        while True:
+            sleep(10)
+            tasks = self.model.tasks()
+            states = set()
 
-        for task in tasks:
-            state = task["Status"]["State"]
-            states.add(state)
+            for task in tasks:
+                state = task["Status"]["State"]
+                states.add(state)
 
-        if invalid_states in states:
-            return False
+            if states_invalid in states:
+                return False
 
-        return len(states) == 1 and states[0] == state
+            if states == set(state_desired):
+                return True
 
 
 class SecretContainer:
