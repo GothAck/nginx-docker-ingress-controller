@@ -33,7 +33,7 @@ http {
   }
 
   {% for service in services -%}
-    # Service {{ service.service.id }}: {{ service.service.name }}
+    # Service {{ service.model.id }}: {{ service.model.name }}
   {% if service.ssl_redirect %}
     server {
       listen 80;
@@ -60,7 +60,7 @@ http {
 
       location / {
         resolver 127.0.0.11;
-        set $service_host {{ service.service.name }};
+        set $service_host {{ service.model.name }};
         set $service_port {{ service.port }};
         set $service_path {{ service.path }};
         proxy_pass http://$service_host:$service_port$service_path$request_uri;
@@ -81,7 +81,7 @@ http {
 
       location / {
         resolver 127.0.0.11;
-        set $service_host {{ service.service.name }};
+        set $service_host {{ service.model.name }};
         set $service_port {{ service.port }};
         set $service_path {{ service.path }};
         proxy_pass http://$service_host:$service_port$service_path$request_uri;
