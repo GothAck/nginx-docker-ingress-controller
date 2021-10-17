@@ -162,7 +162,7 @@ class ServiceAdapter(Generic[TConfigService]):
             elif value:
                 labels.append(f"{label} {value}")
 
-        return f"<ServiceAdapter: {repr(self.service)} {', '.join(labels)}>"
+        return f"<ServiceAdapter: {repr(self.model)} {', '.join(labels)}>"
 
     @property
     def model(self) -> Optional[docker_services.Model]:
