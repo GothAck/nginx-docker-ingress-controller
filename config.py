@@ -102,7 +102,7 @@ class ConfigServices(BaseModel):
 
 class ConfigRoot(BaseModel):
     acme: ConfigAcme
-    services: ConfigServices
+    services: ConfigServices = ConfigServices()
 
 
 def config_load_and_convert(data: str) -> ConfigRoot:
