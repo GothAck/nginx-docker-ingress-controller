@@ -174,7 +174,7 @@ class Controller:
             assert len(tasks) == 1, "Only one task started"
             state = tasks[0]["Status"]["State"]
             desired_state = tasks[0]["DesiredState"]
-            exit_code = tasks[0]["Status"].get("ContainerStatus", {}).get("ExitCode")
+            exit_code = tasks[0]["Status"].get("ContainerStatus", {}).get("ExitCode", 0)
             logger.info("%s %s %d", state, desired_state, exit_code)
             if state == "complete":
                 break
