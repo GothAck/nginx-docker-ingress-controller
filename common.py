@@ -307,9 +307,7 @@ class ServiceAdapter(Generic[TConfigService]):
                 **kwargs,
             )
             if isinstance(config, ConfigServiceNginx):
-                sleep(10)
-                model.update()
-                model.scale(config.replicas)
+                self.model.scale(config.replicas)
         else:
             logger.info("Service %s exists, updating", config.name)
             model.update(
@@ -323,9 +321,7 @@ class ServiceAdapter(Generic[TConfigService]):
                 **kwargs,
             )
             if isinstance(config, ConfigServiceNginx):
-                sleep(10)
-                model.update()
-                model.scale(config.replicas)
+                self.model.scale(config.replicas)
 
         return model
 
