@@ -280,7 +280,7 @@ class ServiceAdapter(Generic[TConfigService]):
 
     def ensure(
         self,
-        command: Optional[str],
+        command: Optional[str] = None,
         networks: Optional[List[str]] = None,
         secrets: Optional[List[SecretReference]] = None,
         mounts: Optional[List[str]] = None,
