@@ -136,6 +136,7 @@ class Controller:
         self.adapter.svc_robot.ensure(
             command=["python", "robot.py", "observe-and-obey"],
             mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
+            secrets=[account_secret_ref],
         )
 
     @property
