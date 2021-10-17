@@ -340,7 +340,7 @@ class ServiceAdapter(Generic[TConfigService]):
             if states_invalid in states:
                 return False
 
-            if states == set(state_desired):
+            if states == set([state_desired]):
                 return True
 
 
