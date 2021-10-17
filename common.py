@@ -337,8 +337,6 @@ class ServiceAdapter(Generic[TConfigService]):
                 state = task["Status"]["State"]
                 states.add(state)
 
-            logger.info("State %s %r %r", state, states, set([state_desired]))
-
             if states_invalid in states:
                 return False
 
