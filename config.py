@@ -37,12 +37,12 @@ class ConfigPorts(BaseModel):
         return v
 
 
-class ConfigPlacementPreference:
+class ConfigPlacementPreference(BaseModel):
     strategy: str = "spread"
     descriptor: str
 
-    @validator("spread")
-    def spread_valid(cls, v: str):
+    @validator("strategy")
+    def strategy_valid(cls, v: str):
         if v not in ["spread"]:
             raise ValueError("Invalid")
         return v

@@ -290,7 +290,8 @@ class ServiceAdapter(Generic[TConfigService]):
         kwargs = {}
         if isinstance(config, ConfigServiceNginx):
             kwargs = dict(
-                preferences=config.preferences, maxreplicas=config.maxreplicas
+                preferences=map(lambda p: p.tuple, config.preferences),
+                maxreplicas=config.maxreplicas,
             )
 
         if not model:
