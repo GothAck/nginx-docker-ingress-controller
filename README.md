@@ -47,3 +47,4 @@ Yeah, I cba running my own bare-metal k8s cluster... <shrug />
 - Make more tea
 - Tidy up old nginx configs & key/cert pairs
 - Utilize Docker Configs for more non-secret data storage
+- X-Forwarded-For or whatever
