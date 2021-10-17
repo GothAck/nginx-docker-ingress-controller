@@ -133,7 +133,7 @@ class Controller:
             account_secret_id, SECRET_ACME_ACCOUNT, SECRET_ACME_ACCOUNT
         )
 
-        model = self.adapter.svc_robot
+        model = self.adapter.svc_robot.model
 
         if model:
             model.remove()
