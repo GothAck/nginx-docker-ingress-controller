@@ -1,5 +1,6 @@
 from abc import ABC, abstractproperty, abstractstaticmethod
 from functools import lru_cache
+from time import sleep
 from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar, cast
 
 import base64
@@ -12,8 +13,17 @@ import docker.models.services as docker_services
 import docker.models.secrets as docker_secrets
 import docker.models.configs as docker_configs
 import docker.types as docker_types
+from docker.types.services import SecretReference
 
-from config import ConfigRoot, config_load_and_convert
+from config import (
+    ConfigRoot,
+    ConfigServiceAccount,
+    ConfigServiceBase,
+    ConfigServiceChallenge,
+    ConfigServiceNginx,
+    ConfigServiceRobot,
+    config_load_and_convert,
+)
 
 NAMESPACE = "ndi"
 SECRET_NGINX_CONF = f"{NAMESPACE}.conf"
@@ -29,8 +39,18 @@ logger = logging.getLogger(__name__)
 class DockerAdapter:
     client: docker.DockerClient
 
+    svc_account: "ServiceAdapter[ConfigServiceAccount]"
+    svc_challenge: "ServiceAdapter[ConfigServiceChallenge]"
+    svc_nginx: "ServiceAdapter[ConfigServiceNginx]"
+    svc_robot: "ServiceAdapter[ConfigServiceRobot]"
+
     def __init__(self, client: docker.DockerClient) -> None:
         self.client = client
+
+        self.svc_account = ServiceAdapter(self, self.config.services.account)
+        self.svc_challenge = ServiceAdapter(self, self.config.services.challenge)
+        self.svc_nginx = ServiceAdapter(self, self.config.services.nginx)
+        self.svc_robot = ServiceAdapter(self, self.config.services.robot)
 
     def list_secrets(self, prefix: Optional[str] = None):
         secrets = self.client.secrets.list()
@@ -120,15 +140,18 @@ class DockerAdapter:
         return config_load_and_convert(data)
 
 
-class ServiceAdapter:
+TConfigService = TypeVar("TConfigService", bound=ConfigServiceBase)
+
+
+class ServiceAdapter(Generic[TConfigService]):
     LABELS = ("hosts", "port", "path", "acme_ssl", "ssl_redirect")
 
     docker: DockerAdapter
-    service: docker_services.Model
+    config: TConfigService
 
-    def __init__(self, docker: DockerAdapter, service: docker_services.Model) -> None:
+    def __init__(self, docker: DockerAdapter, config: TConfigService) -> None:
         self.docker = docker
-        self.service = service
+        self.config = config
 
     def __repr__(self) -> str:
         labels = []
@@ -142,28 +165,42 @@ class ServiceAdapter:
         return f"<ServiceAdapter: {repr(self.service)} {', '.join(labels)}>"
 
     @property
+    def model(self) -> Optional[docker_services.Model]:
+        try:
+            return self.docker.client.services.get(self.config.name)
+        except docker.errors.NotFound:
+            return None
+
+    @property
     def labels(self) -> Dict[str, str]:
-        if "Labels" in self.service.attrs["Spec"]:
-            return self.service.attrs["Spec"]["Labels"]
+        model = self.model
+        if not model:
+            return {}
+
+        if "Labels" in model.attrs["Spec"]:
+            return model.attrs["Spec"]["Labels"]
         return {}
 
     @property
     def hosts(self) -> List[str]:
-        if "nginx-ingress.host" not in self.labels:
+        labels = self.labels
+        if "nginx-ingress.host" not in labels:
             return []
-        return self.labels["nginx-ingress.host"].split(",")
+        return labels["nginx-ingress.host"].split(",")
 
     @property
     def port(self) -> int:
-        if "nginx-ingress.port" not in self.labels:
+        labels = self.labels
+        if "nginx-ingress.port" not in labels:
             return 80
-        return int(self.labels["nginx-ingress.port"])
+        return int(labels["nginx-ingress.port"])
 
     @property
     def path(self) -> str:
-        if "nginx-ingress.path" not in self.labels:
+        labels = self.labels
+        if "nginx-ingress.path" not in labels:
             return "/"
-        return self.labels["nginx-ingress.path"]
+        return labels["nginx-ingress.path"]
 
     @property
     def acme_ssl(self) -> bool:
@@ -175,15 +212,17 @@ class ServiceAdapter:
 
     @property
     def keys(self) -> "VersionedSecrets":
-        return VersionedSecrets(
-            self.docker, f"{SECRET_SVC_BASE}.{self.service.id}.key."
-        )
+        model = self.model
+        if not model:
+            raise ReferenceError(f"Service {self.config.name} does not exist")
+        return VersionedSecrets(self.docker, f"{SECRET_SVC_BASE}.{model.id}.key.")
 
     @property
     def certs(self) -> "VersionedSecrets":
-        return VersionedSecrets(
-            self.docker, f"{SECRET_SVC_BASE}.{self.service.id}.crt."
-        )
+        model = self.model
+        if not model:
+            raise ReferenceError(f"Service {self.config.name} does not exist")
+        return VersionedSecrets(self.docker, f"{SECRET_SVC_BASE}.{model.id}.crt.")
 
     @property
     def latest_cert_pair_with_version(
@@ -226,6 +265,68 @@ class ServiceAdapter:
             return True
 
         return False
+
+    @property
+    def secrets(self) -> Dict[str, str]:
+        secrets = {}
+        model = self.model
+        if not model:
+            return secrets
+
+        for secret in model.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Secrets"]:
+            secrets[secret["File"]["Name"]] = secret["SecretName"]
+
+        return secrets
+
+    def ensure(
+        self,
+        networks: Optional[List[str]] = None,
+        secrets: Optional[List[SecretReference]] = None,
+        mounts: Optional[List[str]] = None,
+    ) -> docker_services.Model:
+        model = self.model
+        config = self.config
+
+        kwargs = {}
+        if isinstance(config, ConfigServiceNginx):
+            kwargs = dict(
+                preferences=config.preferences, maxreplicas=config.maxreplicas
+            )
+
+        if not model:
+            logger.info("Service %s does not exist, creating", config.name)
+            model = self.docker.client.services.create(
+                image=config.image,
+                name=config.name,
+                endpoint_spec=config.endpoint_spec,
+                networks=networks,
+                secrets=secrets,
+                mounts=mounts,
+                constraints=config.constraints,
+                **kwargs,
+            )
+            if isinstance(config, ConfigServiceNginx):
+                sleep(10)
+                model.update()
+                model.scale(config.replicas)
+        else:
+            logger.info("Service %s exists, updating", config.name)
+            model.update(
+                image=config.image,
+                name=config.name,
+                endpoint_spec=config.endpoint_spec,
+                networks=networks,
+                secrets=secrets,
+                mounts=mounts,
+                constraints=config.constraints,
+                **kwargs,
+            )
+            if isinstance(config, ConfigServiceNginx):
+                sleep(10)
+                model.update()
+                model.scale(config.replicas)
+
+        return model
 
 
 class SecretContainer:

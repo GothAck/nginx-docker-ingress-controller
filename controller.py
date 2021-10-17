@@ -1,6 +1,6 @@
 import datetime
 import subprocess
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import logging
 from time import sleep, mktime
@@ -8,7 +8,6 @@ import sys
 
 import docker
 import docker.models.services as docker_services
-from docker.types.services import EndpointSpec, RestartPolicy
 from jinja2 import Template
 
 from common import (
@@ -38,25 +37,8 @@ class Controller:
             self.config_template = Template(template.read())
 
     @property
-    def nginx_service(self) -> Optional[docker_services.Model]:
-        try:
-            return self.adapter.client.services.get("nginx-docker-ingress-nginx")
-        except docker.errors.NotFound:
-            return None
-
-    @property
-    def nginx_service_secrets(self) -> Dict[str, str]:
-        secrets = {}
-        service = self.nginx_service
-        if not service:
-            return secrets
-        for secret in service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Secrets"]:
-            secrets[secret["File"]["Name"]] = secret["SecretName"]
-        return secrets
-
-    @property
     def nginx_service_config(self) -> Optional[str]:
-        return self.nginx_service_secrets.get("/etc/nginx/nginx.conf")
+        return self.adapter.svc_nginx.secrets.get("/etc/nginx/nginx.conf")
 
     @property
     def nginx_config(self) -> SecretContainer:
@@ -100,47 +82,10 @@ class Controller:
                     self.adapter.secret_reference(model.id, model.name, model.name)
                 )
 
-        http_port = self.adapter.config.ports.http
-        https_port = self.adapter.config.ports.https
-
-        endpoint_spec = EndpointSpec(ports={http_port: 80, https_port: 443})
-
-        service = self.nginx_service
-        if not service:
-            logger.info("No nginx service found")
-            service = self.adapter.client.services.create(
-                image="gothack/docker-swarm-ingress:nginx-latest",
-                name="nginx-docker-ingress-nginx",
-                endpoint_spec=endpoint_spec,
-                networks=["nginx-docker-ingress"],
-                secrets=[config_secret_ref, dhparams_secret_ref]
-                + cert_pair_secret_refs,
-            )
-            sleep(10)  # FIXME: sleep, really?!
-            service.update()
-            service.scale(2)
-        else:
-            current_config = self.nginx_service_config
-            logger.info("Nginx service found with config %s", current_config)
-            if current_config != config_secret_name:
-                logger.info(
-                    "Nginx config hash mismatch (%s vs %s), updating",
-                    config_secret_name,
-                    current_config,
-                )
-                service.update(
-                    image="gothack/docker-swarm-ingress:nginx-latest",
-                    endpoint_spec=endpoint_spec,
-                    networks=["nginx-docker-ingress"],
-                    secrets=[config_secret_ref, dhparams_secret_ref]
-                    + cert_pair_secret_refs,
-                )
-                # TODO: Clean up old secret
-                sleep(10)  # FIXME: sleep, really?!
-                service.update()
-                service.scale(2)
-            else:
-                logger.info("Nginx config match, skip update")
+        self.adapter.svc_nginx.ensure(
+            networks=["nginx-docker-ingress"],
+            secrets=[config_secret_ref, dhparams_secret_ref],
+        )
 
     @property
     def account_service(self) -> Optional[docker_services.Model]:
@@ -155,22 +100,18 @@ class Controller:
             # TODO: Validate account?
             return
 
-        service = self.account_service
+        model = self.adapter.svc_account.model
 
-        if service:
-            service.remove()
+        if model:
+            model.remove()
 
-        service = self.adapter.client.services.create(
-            image="gothack/docker-swarm-ingress:robot-latest",
-            name="nginx-docker-ingress-account",
-            command=["python", "robot.py", "ensure-account"],
-            restart_policy=RestartPolicy(),
-            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
+        self.adapter.svc_account.ensure(
+            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"]
         )
 
         while True:
             sleep(10)
-            tasks = service.tasks()
+            tasks = model.tasks()
             assert len(tasks) == 1, "Only one task started"
             state = tasks[0]["Status"]["State"]
             desired_state = tasks[0]["DesiredState"]
@@ -178,13 +119,6 @@ class Controller:
             logger.info("%s %s %d", state, desired_state, exit_code)
             if state == "complete":
                 break
-
-    @property
-    def robot_service(self) -> Optional[docker_services.Model]:
-        try:
-            return self.adapter.client.services.get("nginx-docker-ingress-robot")
-        except docker.errors.NotFound:
-            return None
 
     def ensure_robot(self) -> None:
         logger.info("Ensure robot")
@@ -198,18 +132,13 @@ class Controller:
             account_secret_id, SECRET_ACME_ACCOUNT, SECRET_ACME_ACCOUNT
         )
 
-        robot_service = self.robot_service
+        model = self.adapter.svc_robot
 
-        if robot_service:
-            robot_service.remove()
+        if model:
+            model.remove()
 
-        robot_service = self.adapter.client.services.create(
-            image="gothack/docker-swarm-ingress:robot-latest",
-            name="nginx-docker-ingress-robot",
-            command=["python", "robot.py", "observe-and-obey"],
-            restart_policy=RestartPolicy(),
-            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
-            secrets=[account_secret_ref],
+        self.adapter.svc_robot.ensure(
+            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"]
         )
 
     @property
@@ -255,26 +184,17 @@ class Controller:
                 secret_name, f.read(), dict(expires=str(secert_expiry_unix))
             )
 
-    @property
-    def challenge_service(self) -> Optional[docker_services.Model]:
-        try:
-            return self.adapter.client.services.get("nginx-docker-ingress-challenge")
-        except docker.errors.NotFound:
-            return None
-
     def ensure_challenge(self):
         logger.info("Ensure challenge handler")
 
-        challenge_service = self.challenge_service
+        model = self.adapter.svc_challenge.model
 
-        if challenge_service:
-            challenge_service.remove()
+        if model:
+            model.remove()
 
-        challenge_service = self.adapter.client.services.create(
-            image="gothack/docker-swarm-ingress:challenge-latest",
-            name="nginx-docker-ingress-challenge",
-            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
+        self.adapter.svc_challenge.ensure(
             networks=["nginx-docker-ingress"],
+            mounts=["/var/run/docker.sock:/var/run/docker.sock:rw"],
         )
 
 

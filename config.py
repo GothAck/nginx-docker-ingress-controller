@@ -1,21 +1,12 @@
 import re
 import sys
+from typing import List, Optional, Tuple
+from docker.types.services import EndpointSpec
 
 from pydantic import BaseModel, validator
 import yaml
 
 RE_EMAIL = re.compile(r"^.+@.+$")
-
-
-class ConfigPorts(BaseModel):
-    http: int = 80
-    https: int = 443
-
-    @validator("http", "https")
-    def ports_valid(cls, v: int, field):
-        if v < 1 or v > 65535:
-            raise ValueError("Invalid port")
-        return v
 
 
 class ConfigAcme(BaseModel):
@@ -35,9 +26,80 @@ class ConfigAcme(BaseModel):
         return v
 
 
-class ConfigRoot(BaseModel):
+class ConfigPorts(BaseModel):
+    http: int = 80
+    https: int = 443
+
+    @validator("http", "https")
+    def ports_valid(cls, v: int):
+        if v < 1 or v > 65535:
+            raise ValueError("Invalid port")
+        return v
+
+
+class ConfigPlacementPreference:
+    strategy: str = "spread"
+    descriptor: str
+
+    @validator("spread")
+    def spread_valid(cls, v: str):
+        if v not in ["spread"]:
+            raise ValueError("Invalid")
+        return v
+
+    def tuple(self) -> Tuple[str, str]:
+        return (self.strategy, self.descriptor)
+
+
+class ConfigServiceBase(BaseModel):
+    name: str
+    image: str
+    constraints: List[str] = []
+
+    @property
+    def endpoint_spec(self) -> Optional[EndpointSpec]:
+        return None
+
+
+class ConfigServiceAccount(ConfigServiceBase):
+    name: str = "nginx-docker-ingress-account"
+
+
+class ConfigServiceChallenge(ConfigServiceBase):
+    name: str = "nginx-docker-ingress-challenge"
+
+    @property
+    def endpoint_spec(self) -> Optional[EndpointSpec]:
+        return None  # FIXME
+
+
+class ConfigServiceNginx(ConfigServiceBase):
+    name: str = "nginx-docker-ingress-nginx"
+    image: str = "gothack/docker-swarm-ingress:nginx-latest"
     ports: ConfigPorts = ConfigPorts()
+    replicas: int = 1
+    preferences: List[ConfigPlacementPreference] = []  # FIXME
+    maxreplicas: Optional[int] = None
+
+    @property
+    def endpoint_spec(self) -> Optional[EndpointSpec]:
+        return EndpointSpec(ports={self.ports.http: 80, self.ports.https: 443})
+
+
+class ConfigServiceRobot(ConfigServiceBase):
+    name: str = "nginx-docker-ingress-robot"
+
+
+class ConfigServices(BaseModel):
+    account: ConfigServiceAccount = ConfigServiceAccount()
+    challenge: ConfigServiceChallenge = ConfigServiceChallenge()
+    nginx: ConfigServiceNginx = ConfigServiceNginx()
+    robot: ConfigServiceRobot = ConfigServiceRobot()
+
+
+class ConfigRoot(BaseModel):
     acme: ConfigAcme
+    services: ConfigServices
 
 
 def config_load_and_convert(data: str) -> ConfigRoot:
