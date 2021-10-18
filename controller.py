@@ -116,6 +116,8 @@ class Controller:
 
         self.adapter.svc_account.wait_for_state("complete", "failed")
 
+        self.adapter.svc_account.model.remove()
+
     def ensure_robot(self) -> None:
         logger.info("Ensure robot")
 
