@@ -158,11 +158,11 @@ class ServiceAdapterBase(ABC):
 class ServiceAdapter(ServiceAdapterBase):
     LABELS = ("hosts", "port", "path", "acme_ssl", "ssl_redirect")
 
-    model: docker_services.Model
+    __model: docker_services.Model
 
     def __init__(self, docker: DockerAdapter, model: docker_services.Model) -> None:
         super().__init__(docker)
-        self.model = model
+        self.__model = model
 
     def __repr__(self) -> str:
         labels = []
@@ -174,6 +174,10 @@ class ServiceAdapter(ServiceAdapterBase):
                 labels.append(f"{label} {value}")
 
         return f"<ServiceAdapter: {repr(self.model)} {', '.join(labels)}>"
+
+    @property
+    def model(self) -> docker_services.Model:
+        return self.__model
 
     @property
     def labels(self) -> Dict[str, str]:
@@ -292,6 +296,13 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
 
     def __repr__(self) -> str:
         return f"<IngressService: {repr(self.model)}>"
+
+    @property
+    def model(self) -> Optional[docker_services.Model]:
+        try:
+            return self.docker.client.services.get(self.config.name)
+        except docker.errors.NotFound:
+            return None
 
     def ensure(
         self,
