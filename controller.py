@@ -84,7 +84,7 @@ class Controller:
 
         self.adapter.svc_nginx.ensure(
             networks=["nginx-docker-ingress"],
-            secrets=[config_secret_ref, dhparams_secret_ref],
+            secrets=[config_secret_ref, dhparams_secret_ref] + cert_pair_secret_refs,
         )
 
         self.adapter.svc_nginx.wait_for_state("running", "failed")
