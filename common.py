@@ -39,18 +39,18 @@ logger = logging.getLogger(__name__)
 class DockerAdapter:
     client: docker.DockerClient
 
-    svc_account: "ServiceAdapter[ConfigServiceAccount]"
-    svc_challenge: "ServiceAdapter[ConfigServiceChallenge]"
-    svc_nginx: "ServiceAdapter[ConfigServiceNginx]"
-    svc_robot: "ServiceAdapter[ConfigServiceRobot]"
+    svc_account: "IngressService[ConfigServiceAccount]"
+    svc_challenge: "IngressService[ConfigServiceChallenge]"
+    svc_nginx: "IngressService[ConfigServiceNginx]"
+    svc_robot: "IngressService[ConfigServiceRobot]"
 
     def __init__(self, client: docker.DockerClient) -> None:
         self.client = client
 
-        self.svc_account = ServiceAdapter(self, self.config.services.account)
-        self.svc_challenge = ServiceAdapter(self, self.config.services.challenge)
-        self.svc_nginx = ServiceAdapter(self, self.config.services.nginx)
-        self.svc_robot = ServiceAdapter(self, self.config.services.robot)
+        self.svc_account = IngressService(self, self.config.services.account)
+        self.svc_challenge = IngressService(self, self.config.services.challenge)
+        self.svc_nginx = IngressService(self, self.config.services.nginx)
+        self.svc_robot = IngressService(self, self.config.services.robot)
 
     def list_secrets(self, prefix: Optional[str] = None):
         secrets = self.client.secrets.list()
@@ -143,15 +143,26 @@ class DockerAdapter:
 TConfigService = TypeVar("TConfigService", bound=ConfigServiceBase)
 
 
-class ServiceAdapter(Generic[TConfigService]):
+class ServiceAdapterBase(ABC):
+    docker: DockerAdapter
+
+    def __init__(self, docker: DockerAdapter) -> None:
+        super().__init__()
+        self.docker = docker
+
+    @abstractproperty
+    def model(self) -> Optional[docker_services.Model]:
+        ...
+
+
+class ServiceAdapter(ServiceAdapterBase):
     LABELS = ("hosts", "port", "path", "acme_ssl", "ssl_redirect")
 
-    docker: DockerAdapter
-    config: TConfigService
+    model: docker_services.Model
 
-    def __init__(self, docker: DockerAdapter, config: TConfigService) -> None:
-        self.docker = docker
-        self.config = config
+    def __init__(self, docker: DockerAdapter, model: docker_services.Model) -> None:
+        super().__init__(docker)
+        self.model = model
 
     def __repr__(self) -> str:
         labels = []
@@ -163,13 +174,6 @@ class ServiceAdapter(Generic[TConfigService]):
                 labels.append(f"{label} {value}")
 
         return f"<ServiceAdapter: {repr(self.model)} {', '.join(labels)}>"
-
-    @property
-    def model(self) -> Optional[docker_services.Model]:
-        try:
-            return self.docker.client.services.get(self.config.name)
-        except docker.errors.NotFound:
-            return None
 
     @property
     def labels(self) -> Dict[str, str]:
@@ -214,14 +218,14 @@ class ServiceAdapter(Generic[TConfigService]):
     def keys(self) -> "VersionedSecrets":
         model = self.model
         if not model:
-            raise ReferenceError(f"Service {self.config.name} does not exist")
+            raise ReferenceError(f"Service {self.model.name} does not exist")
         return VersionedSecrets(self.docker, f"{SECRET_SVC_BASE}.{model.id}.key.")
 
     @property
     def certs(self) -> "VersionedSecrets":
         model = self.model
         if not model:
-            raise ReferenceError(f"Service {self.config.name} does not exist")
+            raise ReferenceError(f"Service {self.model.name} does not exist")
         return VersionedSecrets(self.docker, f"{SECRET_SVC_BASE}.{model.id}.crt.")
 
     @property
@@ -277,6 +281,17 @@ class ServiceAdapter(Generic[TConfigService]):
             secrets[secret["File"]["Name"]] = secret["SecretName"]
 
         return secrets
+
+
+class IngressService(ServiceAdapterBase, Generic[TConfigService]):
+    config: TConfigService
+
+    def __init__(self, docker: DockerAdapter, config: TConfigService) -> None:
+        super().__init__(docker)
+        self.config = config
+
+    def __repr__(self) -> str:
+        return f"<IngressService: {repr(self.model)}>"
 
     def ensure(
         self,
