@@ -60,10 +60,7 @@ http {
 
       location / {
         resolver 127.0.0.11;
-        set $service_host {{ service.model.name }};
-        set $service_port {{ service.port }};
-        set $service_path {{ service.path }};
-        proxy_pass http://$service_host:$service_port$service_path$request_uri;
+        proxy_pass http://{{ service.model.name }}:{{ service.port }}{{ service.path }}$request_uri;
       }
     }
   {% endif %}
@@ -81,10 +78,7 @@ http {
 
       location / {
         resolver 127.0.0.11;
-        set $service_host {{ service.model.name }};
-        set $service_port {{ service.port }};
-        set $service_path {{ service.path }};
-        proxy_pass http://$service_host:$service_port$service_path$request_uri;
+        proxy_pass http://{{ service.model.name }}:{{ service.port }}{{ service.path }}$request_uri;
       }
     }
 
