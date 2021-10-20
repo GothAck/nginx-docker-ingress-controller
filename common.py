@@ -199,7 +199,7 @@ class ServiceAdapter(Generic[TConfigService]):
     def path(self) -> str:
         labels = self.labels
         if "nginx-ingress.path" not in labels:
-            return "/"
+            return ""
         return labels["nginx-ingress.path"]
 
     @property
