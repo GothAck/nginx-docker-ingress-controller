@@ -121,10 +121,10 @@ class RoboCert:
         logger.info("Writing secrets")
 
         key_secret_name = (
-            f"{SECRET_SVC_BASE}.{service.service.id}.key.{next_cert_version}"
+            f"{SECRET_SVC_BASE}.{service.model.id}.key.{next_cert_version}"
         )
         cert_secret_name = (
-            f"{SECRET_SVC_BASE}.{service.service.id}.crt.{next_cert_version}"
+            f"{SECRET_SVC_BASE}.{service.model.id}.crt.{next_cert_version}"
         )
 
         key_secret = self.adapter.read_secret(key_secret_name)
