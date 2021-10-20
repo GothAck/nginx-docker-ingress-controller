@@ -61,6 +61,8 @@ http {
       location / {
         resolver 127.0.0.11;
         proxy_pass http://{{ service.model.name }}:{{ service.port }}{{ service.path }}$request_uri;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       }
     }
   {% endif %}
@@ -79,6 +81,8 @@ http {
       location / {
         resolver 127.0.0.11;
         proxy_pass http://{{ service.model.name }}:{{ service.port }}{{ service.path }}$request_uri;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       }
     }
 
