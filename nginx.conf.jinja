@@ -41,7 +41,7 @@ http {
 
       location ^~ /.well-known/acme-challenge/ {
         resolver 127.0.0.11;
-        proxy_pass http://nginx-docker-ingress-challenge:80$request_uri;
+        proxy_pass http://{{ config.services.challenge.name }}:80$request_uri;
       }
 
       location / {
@@ -55,7 +55,7 @@ http {
 
       location ^~ /.well-known/acme-challenge/ {
         resolver 127.0.0.11;
-        proxy_pass http://nginx-docker-ingress-challenge:80$request_uri;
+        proxy_pass http://{{ config.services.challenge.name }}:80$request_uri;
       }
 
       location / {
