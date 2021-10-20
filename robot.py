@@ -43,16 +43,15 @@ class Robot:
 
     async def observe(self) -> None:
         logger.info("Observe")
-        services = list(
-            filter(
-                lambda sp: sp[1] is not None,
-                (
-                    (service, self.service_needs(service))
-                    for service in self.adapter.services
-                    if service.acme_ssl
-                ),
+        services = [
+            sp
+            for sp in (
+                (service, self.service_needs(service))
+                for service in self.adapter.services
+                if service.acme_ssl
             )
-        )
+            if sp[1] is not None
+        ]
 
         logger.info("Services requiring updates %r", services)
 
