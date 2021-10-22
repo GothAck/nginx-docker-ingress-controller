@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 from docker.types.services import EndpointSpec
 
 from pydantic import BaseModel, validator
+from pydantic.class_validators import root_validator
 import yaml
 
 RE_EMAIL = re.compile(r"^.+@.+$")
@@ -98,6 +99,15 @@ class ConfigServices(BaseModel):
     challenge: ConfigServiceChallenge = ConfigServiceChallenge()
     nginx: ConfigServiceNginx = ConfigServiceNginx()
     robot: ConfigServiceRobot = ConfigServiceRobot()
+
+    @root_validator
+    def names_valid(cls, values):
+        names_seen = set()
+        for value in values.values():
+            if value.name in names_seen:
+                raise ValueError(f"Duplicate service name {value.name}")
+            names_seen.add(value.name)
+        return values
 
 
 class ConfigRoot(BaseModel):
