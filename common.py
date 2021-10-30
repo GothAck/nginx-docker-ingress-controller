@@ -219,6 +219,10 @@ class ServiceAdapter(ServiceAdapterBase):
         return "nginx-ingress.ssl-redirect" in self.labels
 
     @property
+    def proxy_protocol(self) -> Optional[str]:
+        return self.labels.get("nginx-ingress.proxy-protocol")
+
+    @property
     def keys(self) -> "VersionedSecrets":
         model = self.model
         if not model:

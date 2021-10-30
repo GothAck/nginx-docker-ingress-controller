@@ -43,9 +43,14 @@ class Controller:
     @property
     def nginx_config(self) -> SecretContainer:
         services = self.adapter.services
+        proxy_protocol = any(service.proxy_protocol is not None for service in services)
         logger.debug("Generating Nginx config, services %r", services)
         return SecretContainer(
-            self.config_template.render(services=services, config=self.adapter.config),
+            self.config_template.render(
+                services=services,
+                proxy_protocol=proxy_protocol,
+                config=self.adapter.config,
+            ),
             metadata=dict(cert_pairs=map(lambda s: s.latest_cert_pair, services)),
         )
 
