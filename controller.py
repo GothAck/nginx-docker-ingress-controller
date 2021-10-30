@@ -60,6 +60,7 @@ class Controller:
         config_secret_name = f"{SECRET_NGINX_CONF}.{config_hash}"
         secret_id = self.adapter.secret_exists(config_secret_name)
         if not secret_id:
+            logger.info(f"Secret {config_secret_name} not found, writing")
             secret_id = self.adapter.write_secret(config_secret_name, str(config)).id
         return (config_hash, secret_id, config)
 
