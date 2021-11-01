@@ -1,13 +1,20 @@
+from typing import List, Optional, Tuple
+
+from enum import Enum
 import re
 import sys
-from typing import List, Optional, Tuple
-from docker.types.services import EndpointSpec
 
+from docker.types.services import EndpointSpec
 from pydantic import BaseModel, validator
 from pydantic.class_validators import root_validator
 import yaml
 
 RE_EMAIL = re.compile(r"^.+@.+$")
+
+
+class EndpointSpecModeEnum(str, Enum):
+    ingress = "ingress"
+    host = "host"
 
 
 class ConfigAcme(BaseModel):
@@ -73,20 +80,23 @@ class ConfigServiceChallenge(ConfigServiceBase):
 
     @property
     def endpoint_spec(self) -> Optional[EndpointSpec]:
-        return None  # FIXME
+        return None
 
 
 class ConfigServiceNginx(ConfigServiceBase):
     name: str = "nginx-docker-ingress-nginx"
     image: str = "gothack/docker-swarm-ingress:nginx-latest"
     ports: ConfigPorts = ConfigPorts()
+    port_mode: EndpointSpecModeEnum = EndpointSpecModeEnum.ingress
     replicas: int = 1
     preferences: List[ConfigPlacementPreference] = []  # FIXME
     maxreplicas: Optional[int] = None
 
     @property
     def endpoint_spec(self) -> Optional[EndpointSpec]:
-        return EndpointSpec(ports={self.ports.http: 80, self.ports.https: 443})
+        return EndpointSpec(
+            mode=str(self.port_mode), ports={self.ports.http: 80, self.ports.https: 443}
+        )
 
 
 class ConfigServiceRobot(ConfigServiceBase):
