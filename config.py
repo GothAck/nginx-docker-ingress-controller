@@ -69,10 +69,6 @@ class ConfigServiceBase(BaseModel):
     image: str
     constraints: List[str] = []
 
-    @property
-    def endpoint_spec(self) -> Optional[EndpointSpec]:
-        return None
-
 
 class ConfigServiceAccount(ConfigServiceBase):
     name: str = "nginx-docker-ingress-account"
@@ -83,23 +79,22 @@ class ConfigServiceChallenge(ConfigServiceBase):
     name: str = "nginx-docker-ingress-challenge"
     image: str = "gothack/docker-swarm-ingress:challenge-latest"
 
-    @property
-    def endpoint_spec(self) -> Optional[EndpointSpec]:
-        return None
-
 
 class ConfigServiceNginx(ConfigServiceBase):
     name: str = "nginx-docker-ingress-nginx"
     image: str = "gothack/docker-swarm-ingress:nginx-latest"
     ports: ConfigPorts = ConfigPorts()
     port_mode: PortPublishMode = PortPublishMode.ingress
+    attach_to_host_network: bool = False
     replicas: int = 1
     service_mode: ServiceMode = ServiceMode.replicated
     preferences: List[ConfigPlacementPreference] = []  # FIXME
-    maxreplicas: Optional[int] = None
+    maxreplicas: Optional[int] = 1
 
     @property
     def endpoint_spec(self) -> Optional[EndpointSpec]:
+        if self.attach_to_host_network:
+            return None
         return EndpointSpec(
             ports={
                 self.ports.http: (80, "tcp", self.port_mode.value),

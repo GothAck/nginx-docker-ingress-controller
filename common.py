@@ -320,12 +320,15 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
 
         kwargs = {}
         if isinstance(config, ConfigServiceNginx):
+            if config.attach_to_host_network:
+                networks.append("host")
             kwargs = dict(
                 preferences=map(lambda p: p.tuple, config.preferences),
                 maxreplicas=config.maxreplicas,
                 mode=ServiceMode(
                     mode=config.service_mode.value, replicas=config.replicas
                 ),
+                endpoint_spec=config.endpoint_spec,
             )
 
         if not model:
@@ -334,7 +337,6 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
                 image=config.image,
                 name=config.name,
                 command=command,
-                endpoint_spec=config.endpoint_spec,
                 networks=networks,
                 secrets=secrets,
                 mounts=mounts,
@@ -347,7 +349,6 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
                 image=config.image,
                 name=config.name,
                 command=command,
-                endpoint_spec=config.endpoint_spec,
                 networks=networks,
                 secrets=secrets,
                 mounts=mounts,
