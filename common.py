@@ -370,10 +370,17 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
                 state = task["Status"]["State"]
                 states.add(state)
 
-            if states_invalid in states:
-                return False
+            logger.debug("Current states %r", states)
+
+            for state_invalid in states_invalid:
+                if state_invalid in states:
+                    logger.info(
+                        "Invalid state detected %s in %r", state_invalid, states
+                    )
+                    return False
 
             if states == set([state_desired]):
+                logger.info("States converged to %s", state_desired)
                 return True
 
 
