@@ -95,7 +95,8 @@ class ConfigServiceNginx(ConfigServiceBase):
     @property
     def endpoint_spec(self) -> Optional[EndpointSpec]:
         return EndpointSpec(
-            mode=str(self.port_mode), ports={self.ports.http: 80, self.ports.https: 443}
+            mode=self.port_mode.value,
+            ports={self.ports.http: 80, self.ports.https: 443},
         )
 
 
