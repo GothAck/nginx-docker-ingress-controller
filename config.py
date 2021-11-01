@@ -12,11 +12,6 @@ import yaml
 RE_EMAIL = re.compile(r"^.+@.+$")
 
 
-class EndpointSpecModeEnum(str, Enum):
-    ingress = "ingress"
-    host = "host"
-
-
 class ConfigAcme(BaseModel):
     email: str
     accept_tos: bool
@@ -87,17 +82,13 @@ class ConfigServiceNginx(ConfigServiceBase):
     name: str = "nginx-docker-ingress-nginx"
     image: str = "gothack/docker-swarm-ingress:nginx-latest"
     ports: ConfigPorts = ConfigPorts()
-    port_mode: EndpointSpecModeEnum = EndpointSpecModeEnum.ingress
     replicas: int = 1
     preferences: List[ConfigPlacementPreference] = []  # FIXME
     maxreplicas: Optional[int] = None
 
     @property
     def endpoint_spec(self) -> Optional[EndpointSpec]:
-        return EndpointSpec(
-            mode=self.port_mode.value,
-            ports={self.ports.http: 80, self.ports.https: 443},
-        )
+        return EndpointSpec(ports={self.ports.http: 80, self.ports.https: 443})
 
 
 class ConfigServiceRobot(ConfigServiceBase):
