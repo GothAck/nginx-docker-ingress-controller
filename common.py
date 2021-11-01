@@ -13,7 +13,7 @@ import docker.models.services as docker_services
 import docker.models.secrets as docker_secrets
 import docker.models.configs as docker_configs
 import docker.types as docker_types
-from docker.types.services import SecretReference
+from docker.types.services import SecretReference, ServiceMode
 
 from config import (
     ConfigRoot,
@@ -323,6 +323,9 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
             kwargs = dict(
                 preferences=map(lambda p: p.tuple, config.preferences),
                 maxreplicas=config.maxreplicas,
+                mode=ServiceMode(
+                    mode=config.service_mode.value, replicas=config.replicas
+                ),
             )
 
         if not model:

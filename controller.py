@@ -95,8 +95,6 @@ class Controller:
 
         self.adapter.svc_nginx.wait_for_state("running", "failed")
 
-        self.adapter.svc_nginx.model.scale(self.adapter.svc_nginx.config.replicas)
-
     @property
     def account_service(self) -> Optional[docker_services.Model]:
         try:

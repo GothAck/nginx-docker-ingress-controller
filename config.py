@@ -17,6 +17,11 @@ class PortPublishMode(str, Enum):
     host = "host"
 
 
+class ServiceMode(str, Enum):
+    replicated = "replicated"
+    global_ = "global"
+
+
 class ConfigAcme(BaseModel):
     email: str
     accept_tos: bool
@@ -89,6 +94,7 @@ class ConfigServiceNginx(ConfigServiceBase):
     ports: ConfigPorts = ConfigPorts()
     port_mode: PortPublishMode = PortPublishMode.ingress
     replicas: int = 1
+    service_mode: ServiceMode = ServiceMode.replicated
     preferences: List[ConfigPlacementPreference] = []  # FIXME
     maxreplicas: Optional[int] = None
 
