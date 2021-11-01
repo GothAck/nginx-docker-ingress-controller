@@ -86,7 +86,7 @@ class ConfigServiceNginx(ConfigServiceBase):
     ports: ConfigPorts = ConfigPorts()
     port_mode: PortPublishMode = PortPublishMode.ingress
     attach_to_host_network: bool = False
-    replicas: int = 1
+    replicas: Optional[int] = None
     service_mode: ServiceMode = ServiceMode.replicated
     preferences: List[ConfigPlacementPreference] = []  # FIXME
     maxreplicas: Optional[int] = 1
