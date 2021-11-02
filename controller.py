@@ -89,7 +89,7 @@ class Controller:
                 )
 
         self.adapter.svc_nginx.ensure(
-            networks=["nginx-docker-ingress"],
+            networks=["nginx-docker-ingress"] + self.adapter.svc_nginx.config.networks,
             secrets=[config_secret_ref, dhparams_secret_ref] + cert_pair_secret_refs,
         )
 

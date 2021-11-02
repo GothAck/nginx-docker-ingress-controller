@@ -15,6 +15,7 @@ RE_EMAIL = re.compile(r"^.+@.+$")
 class PortPublishMode(str, Enum):
     ingress = "ingress"
     host = "host"
+    none = "none"
 
 
 class ServiceMode(str, Enum):
@@ -90,10 +91,13 @@ class ConfigServiceNginx(ConfigServiceBase):
     service_mode: ServiceMode = ServiceMode.replicated
     preferences: List[ConfigPlacementPreference] = []  # FIXME
     maxreplicas: Optional[int] = 1
+    networks: List[str] = []
 
     @property
     def endpoint_spec(self) -> Optional[EndpointSpec]:
         if self.attach_to_host_network:
+            return None
+        if self.port_mode == PortPublishMode.none:
             return None
         return EndpointSpec(
             ports={
