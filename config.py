@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from enum import Enum
 import re
@@ -69,6 +69,7 @@ class ConfigServiceBase(BaseModel):
     name: str
     image: str
     constraints: List[str] = []
+    labels: Dict[str, str] = {}
 
 
 class ConfigServiceAccount(ConfigServiceBase):

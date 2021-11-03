@@ -341,6 +341,7 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
                 secrets=secrets,
                 mounts=mounts,
                 constraints=config.constraints,
+                labels=config.labels,
                 **kwargs,
             )
         else:
@@ -353,6 +354,7 @@ class IngressService(ServiceAdapterBase, Generic[TConfigService]):
                 secrets=secrets,
                 mounts=mounts,
                 constraints=config.constraints,
+                labels=config.labels,
                 **kwargs,
             )
 
