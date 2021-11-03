@@ -191,7 +191,7 @@ class ServiceAdapter(ServiceAdapterBase):
 
     @property
     def hosts(self) -> List[str]:
-        return list(self.labels.get("nginx-ingress.host", "").split(",").filter(bool))
+        return list(filter(bool, self.labels.get("nginx-ingress.host", "").split(",")))
 
     @property
     def port(self) -> int:
