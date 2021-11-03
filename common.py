@@ -191,24 +191,15 @@ class ServiceAdapter(ServiceAdapterBase):
 
     @property
     def hosts(self) -> List[str]:
-        labels = self.labels
-        if "nginx-ingress.host" not in labels:
-            return []
-        return labels["nginx-ingress.host"].split(",")
+        return list(self.labels.get("nginx-ingress.host", "").split(",").filter(bool))
 
     @property
     def port(self) -> int:
-        labels = self.labels
-        if "nginx-ingress.port" not in labels:
-            return 80
-        return int(labels["nginx-ingress.port"])
+        return int(self.labels.get("nginx-ingress.port", 80))
 
     @property
     def path(self) -> str:
-        labels = self.labels
-        if "nginx-ingress.path" not in labels:
-            return ""
-        return labels["nginx-ingress.path"]
+        return self.labels.get("nginx-ingress.path", "")
 
     @property
     def acme_ssl(self) -> bool:
